@@ -1,0 +1,32 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{stylechecker}[2022/06/18 Check minutia in LaTeX documents.]
+
+\RequirePackage{etoolbox}
+\RequirePackage{trimspaces}
+\RequirePackage{stringstrings}
+
+% Check for compound words with differing hyphenation schemes. 
+\newcommand{\checkhyphenation}{
+    \immediate\write18{python stylechecker.py > foo.txt 2>&1}
+    \newread\infofile
+    
+    \IfFileExists{compoundwords.warnings}{
+        \newread\warningsfile
+        \openin\warningsfile=compoundwords.warnings
+        \read\warningsfile to\warnings
+        \closein\warningsfile
+        \ifx\detokenize{\par}\warnings
+            \relax
+        \else
+            \@warning{StyleChecker Warning: \warnings}
+        \fi
+    }{\relax}
+    
+    \openin\infofile=compoundwords.list
+    \endlinechar\newlinechar
+    \loop\unless\ifeof\infofile
+        \readline\infofile to\info
+        \message{StyleChecker: \info}
+    \repeat
+    \closein\infofile
+}
