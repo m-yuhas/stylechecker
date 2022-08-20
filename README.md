@@ -10,9 +10,5 @@ This package has only been tested on Overleaf with the pdflatex compiler.  Perha
 2. Include this package in your main .tex file: ```\usepackage{stylechecker}```
 3. Add the command ```\checkhyphenation{}``` somewhere in your document to check for inconsistant hyphenation.  If some instances are found, a warning message will appear at compile time.
 
-## Future Tasks
-1. Tokenize the .tex files to avoid checking comments and achieve consistent behaviour inside commands
-2. Add acronym finder
-3. Check for camel case inconsitencies
-4. Add ignore command to override
-5. Support lualatex and xelatex compilers
+## Contributing
+If you find a bug or want an additional feature, please open an issue on the GitHub issue tracker.  If you fix a bug yourself or want to contribute a new feature, please feel free to make a pull request.
