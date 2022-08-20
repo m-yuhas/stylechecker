@@ -7,7 +7,7 @@
 
 % Check for compound words with differing hyphenation schemes. 
 \newcommand{\checkhyphenation}{
-    \immediate\write18{python stylechecker.py > foo.txt 2>&1}
+    \immediate\write18{python stylechecker.py --hyphenation > std.out 2>&1}
     \newread\infofile
     
     \IfFileExists{compoundwords.warnings}{
