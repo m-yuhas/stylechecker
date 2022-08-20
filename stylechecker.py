@@ -15,7 +15,19 @@ Tokens = List[Tuple[str, int]]
 
 @dataclasses.dataclass
 class TexNode:
-    """Representation of one node of a LaTeX file tree."""
+    """Representation of one node of a LaTeX file tree.
+    
+    Args:
+        contents - the text contained within a node.
+        type - whether the node is a command, text, or comment.
+        lineno - line number in the .tex file where this node occurs.
+        parent - pointer to this node's parent (if any).
+        prev - pointer the previous node in the tree (if any).
+        next - pointer to the next node in the tree (if any).
+        child - pointer to this node's child (if any).
+        visited - used during iteration, True if this node has already been
+            visited.
+    """
     content: str
     type: str
     lineno: int
@@ -35,12 +47,24 @@ class TexNode:
 
 @dataclasses.dataclass
 class CommandNode(TexNode):
-    """Representation of command node in LaTeX tree."""
+    """Representation of command node in LaTeX tree.  Inherits all fields of
+    TexNode and the additional list of args that can occur in LaTeX commands.
+    
+    Args:
+        args - list of nodes corresponding to the root of TexTrees in each
+            argument attached to a LaTeX command.
+    """
     args: List[TexNode] = dataclasses.field(default_factory=list)
             
 
 class TexTree(object):
-    """Represent the contents of a LaTeX document as a tree.
+    """Represent the contents of a LaTeX document as a tree.  In this tree
+    each node's child represents an element contained within it.  For
+    instance, in '\textbf{Hello World!}', '\textbf' is a command and
+    'Hello World!' is its child.  Each node can only have one child.
+    Successive nodes (e.g., new paragraphs) are represented as a doubly
+    linked-list at each child.  Elements of this linked-list can also contain
+    their own children.
 
     Args:
         tex - string of the LaTeX document being analyzed.
@@ -238,11 +262,24 @@ class TexTree(object):
 
 
 def check_localization(text: str) -> None:
+    """Find inconsitent use of localized spellings (e.g. analysed and
+    analyzed) in the same document.  Write a list of discrepancies to
+    'loc.list' and write warning messages for the discrepancies to
+    'loc.warnings'.
+
+    Args:
+        docs: a list of files comprising the project.
+    """
     pass
 
 
 def check_acronyms(text: str) -> None:
-    """Find all acronyms used in the document text.  Write a list of acronyms and their definitions to 'acronyms.list' and write warning messages for acronyms missing definitions to 'acryonyms.warnings'.
+    """Find all acronyms used in the document text.  Write a list of acronyms
+    and their definitions to 'acronyms.list' and write warning messages for
+    acronyms missing definitions to 'acryonyms.warnings'.
+
+    Args:
+        docs: a list of files comprising the project.
     """
     pass
 
@@ -320,13 +357,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     tex_files = []
     if len(args.files) <= 0:
-        print('HERE')
         for root, _, files in os.walk('.'):
             for f in files:
                 if f.endswith('.tex'):
                     tex_files.append(os.path.join(root, f))
     else:
-        print('OR HERE?')
         tex_files = args.files
     if args.hyphenation:
         check_hyphenations(tex_files)
