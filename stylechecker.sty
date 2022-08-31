@@ -1,18 +1,21 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{stylechecker}[2022/06/18 Check minutia in LaTeX documents.]
-
 \RequirePackage{etoolbox}
 \RequirePackage{trimspaces}
 \RequirePackage{stringstrings}
 
+
 % Check for compound words with differing hyphenation schemes. 
+%
+% For example in one location "hyper-parameters" may appear, but in another
+% location "hyperparameters" appears.
 \newcommand{\checkhyphenation}{
     \immediate\write18{python stylechecker.py --hyphenation > std.out 2>&1}
     \newread\infofile
     
-    \IfFileExists{compoundwords.warnings}{
+    \IfFileExists{hyphenations.warnings}{
         \newread\warningsfile
-        \openin\warningsfile=compoundwords.warnings
+        \openin\warningsfile=hyphenations.warnings
         \read\warningsfile to\warnings
         \closein\warningsfile
         \ifx\detokenize{\par}\warnings
@@ -22,11 +25,86 @@
         \fi
     }{\relax}
     
-    \openin\infofile=compoundwords.list
-    \endlinechar\newlinechar
+    \openin\infofile=hyphenations.list
     \loop\unless\ifeof\infofile
         \readline\infofile to\info
         \message{StyleChecker: \info}
     \repeat
     \closein\infofile
+}
+
+
+% Check for undefined acronyms. 
+%
+% This check raises a warning if any acronyms in the document are undefined.
+% An acronym is considered defined if it appears in parentheses after its
+% full name or if its full name appears in parentheses after it at least once
+% in the entire document.  Additionally a list of all acronyms and their
+% definitions is written to "acronyms.list."  Currently acronyms containing
+% lowercase letters and numbers are not supported.
+\newcommand{\checkacronyms}{
+    \immediate\write18{python stylechecker.py --acronyms > std.out 2>&1}
+    \newread\infofile
+    
+    \IfFileExists{acronyms.warnings}{
+        \newread\warningsfile
+        \openin\warningsfile=acronyms.warnings
+        \read\warningsfile to\warnings
+        \closein\warningsfile
+        \ifx\detokenize{\par}\warnings
+            \relax
+        \else
+            \@warning{StyleChecker Warning: \warnings}
+        \fi
+    }{\relax}
+    
+    \openin\infofile=acronyms.list
+    \loop\unless\ifeof\infofile
+        \readline\infofile to\info
+        \message{StyleChecker: \info}
+    \repeat
+    \closein\infofile
+}
+
+
+% Check for localization mismatch.
+%
+% This check looks for common words that are spelled differently in US and UK
+% English (e.g. "analyze" and "analyse") and publishes a warning message if
+% inconsistent spellings are used throughout the document. 
+\newcommand{\checklocalization}{
+    \immediate\write18{python stylechecker.py --localization > std.out 2>&1}
+    \newread\infofile
+    
+    \IfFileExists{localization.warnings}{
+        \newread\warningsfile
+        \openin\warningsfile=localization.warnings
+        \read\warningsfile to\warnings
+        \closein\warningsfile
+        \ifx\detokenize{\par}\warnings
+            \relax
+        \else
+            \@warning{StyleChecker Warning: \warnings}
+        \fi
+    }{\relax}
+    
+    \openin\infofile=localization.list
+    \loop\unless\ifeof\infofile
+        \readline\infofile to\info
+        \message{StyleChecker: \info}
+    \repeat
+    \closein\infofile
+}
+
+
+% Perform all checks.
+%
+% Currently this includes:
+%   - consistent hyphenation
+%   - all acronyms defined
+%   - consistent word localization
+\newcommand{\checkall}{
+    \checkhyphenation{}
+    \checkacronyms{}
+    \checklocalization{}
 }

@@ -6,11 +6,20 @@ and responses results are printed to stdout."""
 from typing import Dict, List, Optional, Tuple
 import argparse
 import dataclasses
+import enum
 import os
 import re
 
 
 Tokens = List[Tuple[str, int]]
+
+
+class NodeType(enum.Enum):
+    """Possible types that a node in a TexTree can take."""
+    ROOT = 0
+    COMMENT = 1
+    COMMAND = 2
+    TEXT = 3
 
 
 @dataclasses.dataclass
@@ -29,7 +38,7 @@ class TexNode:
             visited.
     """
     content: str
-    type: str
+    type: NodeType
     lineno: int
     parent: object = None
     prev: object = None
@@ -43,18 +52,6 @@ class TexNode:
             return f'├── {self.type} ({self.lineno}): ' + self.content.replace("\n", "")
         else:
             return f'└── {self.type} ({self.lineno}): ' + self.content.replace("\n", "")
-
-
-@dataclasses.dataclass
-class CommandNode(TexNode):
-    """Representation of command node in LaTeX tree.  Inherits all fields of
-    TexNode and the additional list of args that can occur in LaTeX commands.
-    
-    Args:
-        args - list of nodes corresponding to the root of TexTrees in each
-            argument attached to a LaTeX command.
-    """
-    args: List[TexNode] = dataclasses.field(default_factory=list)
             
 
 class TexTree(object):
@@ -152,8 +149,6 @@ class TexTree(object):
                     or char == '}'
                     or char == '%'
                     or char == '\\'
-                    or char == '['
-                    or char == ']'
                 ) and not (
                     len(curr_token) > 0
                     and curr_token[-1] == '\\')
@@ -170,69 +165,59 @@ class TexTree(object):
     def parse(tokens: Tokens) -> Tuple[Tokens, TexNode]:
         """Build self from a list of tokens.
 
+        Note 1: currently arguments to command in [] are ignored and treated
+        as text.
+
+        Note 2: if the LaTeX is invalid (e.g., extra or missing { or }), the
+        parser will still return its best attempt at forming a tree.  This
+        should not be used to check the validity of LaTeX syntax.
+
         Args:
             tokens: list of tokens from a LaTeX document
         """
-        root = TexNode('', 'root', 0)
+        root = TexNode('', NodeType.ROOT, 0)
         curr_node = root
         curr_content = ''
-        curr_type = 'text'
+        curr_type = NodeType.TEXT
         while len(tokens) != 0:
             tok = tokens.pop()
-            if tok[0] == '%' and curr_type != 'comment':
-                next_node = TexNode(curr_content, curr_type, tok[1])
+            if tok[0] == '%' and curr_type != NodeType.COMMENT:
+                next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
                 curr_content = ''
-                curr_type = 'comment'
+                curr_type = NodeType.COMMENT
             elif tok[0] == '\n':
-                next_node = TexNode(curr_content, curr_type, tok[1])
+                next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
                 curr_content = ''
-                curr_type = 'text'
-            elif tok[0] == '\\' and curr_type != 'comment':
-                next_node = TexNode(curr_content, curr_type, tok[1])
+                curr_type = NodeType.TEXT
+            elif tok[0] == '\\' and curr_type != NodeType.COMMENT:
+                next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
                 curr_content = '\\'
-                curr_type = 'command'
-            elif tok[0] == '{' and curr_type != 'comment':
-                next_node = TexNode(curr_content, curr_type, tok[1])
+                curr_type = NodeType.COMMAND
+            elif tok[0] == '{' and curr_type != NodeType.COMMENT:
+                next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 tokens, next_node.child = TexTree.parse(tokens)
                 next_node.child.parent = next_node
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
                 curr_content = ''
-                curr_type = 'text'
-            elif tok[0] == '}' and curr_type != 'comment':
-                next_node = TexNode(curr_content, curr_type, tok[1])
+                curr_type = NodeType.TEXT
+            elif tok[0] == '}' and curr_type != NodeType.COMMENT:
+                next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node 
                 return tokens, root
-            elif tok[0] == '[' and curr_type == 'command':
-                next_node = CommandNode(curr_content, curr_type, tok[1])
-                tokens, arg = TexTree.parse(tokens)
-                next_node.args.append(arg)
-                curr_node.next = next_node
-                next_node.prev = curr_node
-                curr_node = next_node
-                curr_content = ''
-                curr_type = 'text'
-            elif tok[0] == ']' and curr_type == 'command':
-                next_node = TexNode(curr_content, curr_type, tok[1])
-                curr_node.next = next_node
-                next_node.prev = curr_node
-                return tokens, root
             else:
                 curr_content += tok[0]
-        next_node = TexNode(curr_content, curr_type, tok[1])
-        curr_node.next = next_node
-        next_node.prev = curr_node
         return tokens, root
 
     @staticmethod
@@ -249,7 +234,7 @@ class TexTree(object):
             node.next = TexTree.prune(node.next)
         if node.child:
             node.child = TexTree.prune(node.child)
-        if node.content.strip() == '':
+        if node.content == '':
             if node.prev:
                 node.prev.next = node.next
                 node = node.next
@@ -261,7 +246,7 @@ class TexTree(object):
         return node
 
 
-def check_localization(text: str) -> None:
+def check_localization(docs: List[str]) -> None:
     """Find inconsitent use of localized spellings (e.g. analysed and
     analyzed) in the same document.  Write a list of discrepancies to
     'loc.list' and write warning messages for the discrepancies to
@@ -270,10 +255,48 @@ def check_localization(text: str) -> None:
     Args:
         docs: a list of files comprising the project.
     """
-    pass
+    us_spellings = []
+    uk_spellings = []
+    for doc in docs:
+        with open(doc, 'r') as fp:
+            tree = TexTree(fp.read())
+            for node in tree:
+                if node.type == NodeType.TEXT:
+                    us_matches = re.findall(
+                        r'(\w+zation|\w+yze|\w+yzing|\w+our|\w+our\w+|\w+re)\b',
+                        node.content)
+                    if len(us_matches) > 0:
+                        us_spellings.append((us_matches, doc, node.lineno))
+                    uk_matches = re.findall(
+                        r'(\w+sation|\w+yse|\w+ysing|\w+our|\w+our\w+|\w+re)\b',
+                        node.content)
+                    if len(uk_matches) > 0:
+                        uk_spellings.append((uk_matches, doc, node.lineno))
+    with open('localization.list', 'w') as list_f:
+        list_f.write('US spellings used in this document:')
+        for item in us_spellings:
+            word_list = ', '.join([f'"{x}"' for x in item[0]])
+            list_f.write(
+                f'\nIn {item[1]}, line {item[2]} the spellings: '
+                f'{word_list} appear')
+        if len(us_spellings) == 0:
+            list_f.write(' None')
+        list_f.write('\nUK spellings used in this document:')
+        for item in uk_spellings:
+            word_list = ', '.join([f'"{x}"' for x in item[0]])
+            list_f.write(
+                f'\nIn {item[1]}, line {item[2]} the spellings: '
+                f'{word_list} appear')
+        if len(uk_spellings) == 0:
+            list_f.write(' None')
+    with open('localization.warnings', 'w') as warn_f:
+        if len(us_spellings) > 0 and len(uk_spellings) > 0:
+            warn_f.write(
+                'Both US and UK spellings are used in the same document, '
+                'please check the full build logs for details.')
 
 
-def check_acronyms(text: str) -> None:
+def check_acronyms(docs: List[str]) -> None:
     """Find all acronyms used in the document text.  Write a list of acronyms
     and their definitions to 'acronyms.list' and write warning messages for
     acronyms missing definitions to 'acryonyms.warnings'.
@@ -281,7 +304,39 @@ def check_acronyms(text: str) -> None:
     Args:
         docs: a list of files comprising the project.
     """
-    pass
+    acronyms = {}
+    for doc in docs:
+        with open(doc, 'r') as fp:
+            tree = TexTree(fp.read())
+            for node in tree:
+                if node.type == NodeType.TEXT:
+                    matches = re.findall(r'\b([A-Z]{2,})\b', node.content)
+                    for m in matches:
+                        if m not in acronyms:
+                            acronyms[m] = []
+                        before = ('(' + 
+                                  ''.join([c + '\\w+\\s' for c in m[:-1]]) + 
+                                  m[-1] + '\\w+|' +
+                                  ''.join([c.lower() + '\\w+\\s' for c in m[-1]]) +
+                                  m[-1] + '\\w+)\s+\\(' + m + '\\)')
+                        after = (m + '\s\\((' +
+                                 ''.join([c + '\\w+\\s' for c in m[:-1]]) +
+                                 m[-1] + '\\w+|' +
+                                 ''.join([c.lower() + '\\w+\\s' for c in m[:-1]]) +
+                                 m[-1].lower() + '\\w+)\\)')
+                        acronyms[m].extend(re.findall(before, node.content))
+                        acronyms[m].extend(re.findall(after, node.content))
+    with open('acronyms.list', 'w') as list_f:
+        list_f.write('Acronyms appearing in this document:')
+        for acronym, definitions in acronyms.items():
+            list_f.write(f'\n{acronym}: {", ".join(definitions)}')
+    with open('acronyms.warnings', 'w') as warn_f:
+        for acronym, definitions in acronyms.items():
+            if len(definitions) == 0:
+                warn_f.write(f'The acronym {acronym} is possibly undefined.\n')
+        if warn_f.tell() - 1 > 0:
+            warn_f.seek(warn_f.tell() - 1)
+            warn_f.truncate()
 
 
 def check_hyphenations(docs: List[str]) -> None:
@@ -292,42 +347,47 @@ def check_hyphenations(docs: List[str]) -> None:
     Args:
         docs: a list of files comprising the project.
     """
+    trees = []
     compound_words = {}
     for doc in docs:
         with open(doc, 'r') as fp:
             tree = TexTree(fp.read())
             for node in tree:
-                if node.type == 'text':
-                    matches = re.findall(r'(?:\S+-\S+)', node.content)
+                if node.type == NodeType.TEXT:
+                    matches = re.findall(r'\b(?:\S+-\S+)\b', node.content)
                     for m in matches:
                         if m not in compound_words:
                             compound_words[m] = []
                         compound_words[m].append((doc, node.lineno))
-    mismatches = {}                    
-    for doc in docs:
-        with open(doc, 'r') as fp:
-            tree = TexTree(fp.read())
-            for node in tree:
-                if node.type == 'text':
-                    for word in compound_words:
-                        matches = re.findall(
-                            f'{"[^-]?".join(word.split("-"))}',
-                            node.content)
-                        for m in matches:
-                            if m not in mismatches:
-                                mismatches[word] = []
-                            mismatches[word].append((doc, node.lineno, m))
-    with open('compoundwords.list', 'w') as fp:
-        fp.write('Compound words appearing in this document:')
+            trees.append((tree, doc))
+    mismatches = {}
+    for tree, doc in trees:             
+        for node in tree:
+            if node.type == NodeType.TEXT:
+                for word in compound_words:
+                    matches = re.findall(
+                        f'\\b{"[^-]?".join(re.split("[-]", word))}\\b',
+                        node.content)
+                    for m in matches:
+                        if word not in mismatches:
+                            mismatches[word] = []
+                        mismatches[word].append((doc, node.lineno, m))
+    with open('hyphenations.list', 'w') as list_f:
+        list_f.write('Hyphenated words appearing in this document:')
         for word, appearances in compound_words.items():
-            fp.write(f'\n{word} appears {len(appearances)} times')
+            list_f.write(
+                f'\n{word} appears {len(appearances)} time'
+                f'{"s" if len(appearances) != 1 else ""}')
     if len(mismatches) == 0:
         return
-    with open('compoundwords.warnings', 'w') as fp:
+    with open('hyphenations.warnings', 'w+') as warn_f:
         for word, appearances in mismatches.items():
             locations = ", ".join(
                 [f'"{a[2]}" in {a[0]} on line {a[1]}' for a in appearances])
-            fp.write(f'"{word}" also appears as {locations}')
+            warn_f.write(f'"{word}" also appears as {locations}\n')
+        if warn_f.tell() - 1 > 0:
+            warn_f.seek(warn_f.tell() - 1)
+            warn_f.truncate()
 
     
 if __name__ == '__main__':
