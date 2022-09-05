@@ -16,6 +16,7 @@ Tokens = List[Tuple[str, int]]
 
 class NodeType(enum.Enum):
     """Possible types that a node in a TexTree can take."""
+
     ROOT = 0
     COMMENT = 1
     COMMAND = 2
@@ -25,7 +26,7 @@ class NodeType(enum.Enum):
 @dataclasses.dataclass
 class TexNode:
     """Representation of one node of a LaTeX file tree.
-    
+
     Args:
         contents - the text contained within a node.
         type - whether the node is a command, text, or comment.
@@ -37,6 +38,7 @@ class TexNode:
         visited - used during iteration, True if this node has already been
             visited.
     """
+
     content: str
     type: NodeType
     lineno: int
@@ -49,10 +51,10 @@ class TexNode:
     def __str__(self) -> str:
         """String representation of node for use when printing a tree of nodes."""
         if self.next:
-            return f'├── {self.type} ({self.lineno}): ' + self.content.replace("\n", "")
+            return f"├── {self.type} ({self.lineno}): " + self.content.replace("\n", "")
         else:
-            return f'└── {self.type} ({self.lineno}): ' + self.content.replace("\n", "")
-            
+            return f"└── {self.type} ({self.lineno}): " + self.content.replace("\n", "")
+
 
 class TexTree(object):
     """Represent the contents of a LaTeX document as a tree.  In this tree
@@ -71,9 +73,10 @@ class TexTree(object):
         tokens = TexTree.tokenize(tex)
         tokens.reverse()
         tokens, root = TexTree.parse(tokens)
-        assert len(tokens) <= 0, \
-            "Sorry, I wasn't able to parse the LaTeX document, please " \
+        assert len(tokens) <= 0, (
+            "Sorry, I wasn't able to parse the LaTeX document, please "
             "check for unmatched {, [, ], or }"
+        )
         self.root = TexTree.prune(root)
 
     def __str__(self) -> str:
@@ -113,7 +116,7 @@ class TexTree(object):
     def tostring(node: TexNode, depth: List[bool]) -> str:
         """Print an individual node of the tree in its place in the larger
         tree."""
-        s = ''.join(["│   " if x else "    " for x in depth]) + f'{node}\n'
+        s = "".join(["│   " if x else "    " for x in depth]) + f"{node}\n"
         if node.child:
             depth.append(True if node.next else False)
             s += TexTree.tostring(node.child, depth)
@@ -128,35 +131,28 @@ class TexTree(object):
 
         Args:
             s: stringified contents of document
-        
+
         Returns:
             A list of tokens.  Each token is a tuple consisting of a string
             (the token itself), and its associated line number.
         """
         tokens = []
-        curr_token = ''
+        curr_token = ""
         line_no = 1
         for char in s:
-            if char == '\n':
-                if curr_token != '':
+            if char == "\n":
+                if curr_token != "":
                     tokens.append((curr_token, line_no))
                 tokens.append((char, line_no))
-                curr_token = ''
+                curr_token = ""
                 line_no += 1
-            elif (
-                (
-                    char == '{'
-                    or char == '}'
-                    or char == '%'
-                    or char == '\\'
-                ) and not (
-                    len(curr_token) > 0
-                    and curr_token[-1] == '\\')
+            elif (char == "{" or char == "}" or char == "%" or char == "\\") and not (
+                len(curr_token) > 0 and curr_token[-1] == "\\"
             ):
-                if curr_token != '':
+                if curr_token != "":
                     tokens.append((curr_token, line_no))
                 tokens.append((char, line_no))
-                curr_token = ''
+                curr_token = ""
             else:
                 curr_token += char
         return tokens
@@ -175,46 +171,46 @@ class TexTree(object):
         Args:
             tokens: list of tokens from a LaTeX document
         """
-        root = TexNode('', NodeType.ROOT, 0)
+        root = TexNode("", NodeType.ROOT, 0)
         curr_node = root
-        curr_content = ''
+        curr_content = ""
         curr_type = NodeType.TEXT
         while len(tokens) != 0:
             tok = tokens.pop()
-            if tok[0] == '%' and curr_type != NodeType.COMMENT:
+            if tok[0] == "%" and curr_type != NodeType.COMMENT:
                 next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
-                curr_content = ''
+                curr_content = ""
                 curr_type = NodeType.COMMENT
-            elif tok[0] == '\n':
+            elif tok[0] == "\n":
                 next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
-                curr_content = ''
+                curr_content = ""
                 curr_type = NodeType.TEXT
-            elif tok[0] == '\\' and curr_type != NodeType.COMMENT:
+            elif tok[0] == "\\" and curr_type != NodeType.COMMENT:
                 next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
-                curr_content = '\\'
+                curr_content = "\\"
                 curr_type = NodeType.COMMAND
-            elif tok[0] == '{' and curr_type != NodeType.COMMENT:
+            elif tok[0] == "{" and curr_type != NodeType.COMMENT:
                 next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 tokens, next_node.child = TexTree.parse(tokens)
                 next_node.child.parent = next_node
                 curr_node.next = next_node
                 next_node.prev = curr_node
                 curr_node = next_node
-                curr_content = ''
+                curr_content = ""
                 curr_type = NodeType.TEXT
-            elif tok[0] == '}' and curr_type != NodeType.COMMENT:
+            elif tok[0] == "}" and curr_type != NodeType.COMMENT:
                 next_node = TexNode(curr_content.strip(), curr_type, tok[1])
                 curr_node.next = next_node
-                next_node.prev = curr_node 
+                next_node.prev = curr_node
                 return tokens, root
             else:
                 curr_content += tok[0]
@@ -234,7 +230,7 @@ class TexTree(object):
             node.next = TexTree.prune(node.next)
         if node.child:
             node.child = TexTree.prune(node.child)
-        if node.content == '':
+        if node.content == "":
             if node.prev:
                 node.prev.next = node.next
                 node = node.next
@@ -258,42 +254,45 @@ def check_localization(docs: List[str]) -> None:
     us_spellings = []
     uk_spellings = []
     for doc in docs:
-        with open(doc, 'r') as fp:
+        with open(doc, "r") as fp:
             tree = TexTree(fp.read())
             for node in tree:
                 if node.type == NodeType.TEXT:
                     us_matches = re.findall(
-                        r'(\w+zation|\w+yze|\w+yzing|\w+our|\w+our\w+|\w+re)\b',
-                        node.content)
+                        r"(\w+zation|\w+yze|\w+yzing|\w+our|\w+our\w+|\w+re)\b",
+                        node.content,
+                    )
                     if len(us_matches) > 0:
                         us_spellings.append((us_matches, doc, node.lineno))
                     uk_matches = re.findall(
-                        r'(\w+sation|\w+yse|\w+ysing|\w+our|\w+our\w+|\w+re)\b',
-                        node.content)
+                        r"(\w+sation|\w+yse|\w+ysing|\w+our|\w+our\w+|\w+re)\b",
+                        node.content,
+                    )
                     if len(uk_matches) > 0:
                         uk_spellings.append((uk_matches, doc, node.lineno))
-    with open('localization.list', 'w') as list_f:
-        list_f.write('US spellings used in this document:')
+    with open("localization.list", "w") as list_f:
+        list_f.write("US spellings used in this document:")
         for item in us_spellings:
-            word_list = ', '.join([f'"{x}"' for x in item[0]])
+            word_list = ", ".join([f'"{x}"' for x in item[0]])
             list_f.write(
-                f'\nIn {item[1]}, line {item[2]} the spellings: '
-                f'{word_list} appear')
+                f"\nIn {item[1]}, line {item[2]} the spellings: " f"{word_list} appear"
+            )
         if len(us_spellings) == 0:
-            list_f.write(' None')
-        list_f.write('\nUK spellings used in this document:')
+            list_f.write(" None")
+        list_f.write("\nUK spellings used in this document:")
         for item in uk_spellings:
-            word_list = ', '.join([f'"{x}"' for x in item[0]])
+            word_list = ", ".join([f'"{x}"' for x in item[0]])
             list_f.write(
-                f'\nIn {item[1]}, line {item[2]} the spellings: '
-                f'{word_list} appear')
+                f"\nIn {item[1]}, line {item[2]} the spellings: " f"{word_list} appear"
+            )
         if len(uk_spellings) == 0:
-            list_f.write(' None')
-    with open('localization.warnings', 'w') as warn_f:
+            list_f.write(" None")
+    with open("localization.warnings", "w") as warn_f:
         if len(us_spellings) > 0 and len(uk_spellings) > 0:
             warn_f.write(
-                'Both US and UK spellings are used in the same document, '
-                'please check the full build logs for details.')
+                "Both US and UK spellings are used in the same document, "
+                "please check the full build logs for details."
+            )
 
 
 def check_acronyms(docs: List[str]) -> None:
@@ -306,34 +305,45 @@ def check_acronyms(docs: List[str]) -> None:
     """
     acronyms = {}
     for doc in docs:
-        with open(doc, 'r') as fp:
+        with open(doc, "r") as fp:
             tree = TexTree(fp.read())
             for node in tree:
                 if node.type == NodeType.TEXT:
-                    matches = re.findall(r'\b([A-Z]{2,})\b', node.content)
+                    matches = re.findall(r"\b([A-Z]{2,})\b", node.content)
                     for m in matches:
                         if m not in acronyms:
                             acronyms[m] = []
-                        before = ('(' + 
-                                  ''.join([c + '\\w+\\s' for c in m[:-1]]) + 
-                                  m[-1] + '\\w+|' +
-                                  ''.join([c.lower() + '\\w+\\s' for c in m[-1]]) +
-                                  m[-1] + '\\w+)\s+\\(' + m + '\\)')
-                        after = (m + '\s\\((' +
-                                 ''.join([c + '\\w+\\s' for c in m[:-1]]) +
-                                 m[-1] + '\\w+|' +
-                                 ''.join([c.lower() + '\\w+\\s' for c in m[:-1]]) +
-                                 m[-1].lower() + '\\w+)\\)')
+                        before = (
+                            "("
+                            + "".join([c + "\\w+\\s" for c in m[:-1]])
+                            + m[-1]
+                            + "\\w+|"
+                            + "".join([c.lower() + "\\w+\\s" for c in m[-1]])
+                            + m[-1]
+                            + "\\w+)\s+\\("
+                            + m
+                            + "\\)"
+                        )
+                        after = (
+                            m
+                            + "\s\\(("
+                            + "".join([c + "\\w+\\s" for c in m[:-1]])
+                            + m[-1]
+                            + "\\w+|"
+                            + "".join([c.lower() + "\\w+\\s" for c in m[:-1]])
+                            + m[-1].lower()
+                            + "\\w+)\\)"
+                        )
                         acronyms[m].extend(re.findall(before, node.content))
                         acronyms[m].extend(re.findall(after, node.content))
-    with open('acronyms.list', 'w') as list_f:
-        list_f.write('Acronyms appearing in this document:')
+    with open("acronyms.list", "w") as list_f:
+        list_f.write("Acronyms appearing in this document:")
         for acronym, definitions in acronyms.items():
             list_f.write(f'\n{acronym}: {", ".join(definitions)}')
-    with open('acronyms.warnings', 'w') as warn_f:
+    with open("acronyms.warnings", "w") as warn_f:
         for acronym, definitions in acronyms.items():
             if len(definitions) == 0:
-                warn_f.write(f'The acronym {acronym} is possibly undefined.\n')
+                warn_f.write(f"The acronym {acronym} is possibly undefined.\n")
         if warn_f.tell() - 1 > 0:
             warn_f.seek(warn_f.tell() - 1)
             warn_f.truncate()
@@ -343,83 +353,88 @@ def check_hyphenations(docs: List[str]) -> None:
     """Find discrepancies in hyphenation of compound words, write a detailed
     report to 'compoundwords.list' and suspected discrepancies to
     'compoundwords.warnings'.
-    
+
     Args:
         docs: a list of files comprising the project.
     """
     trees = []
     compound_words = {}
     for doc in docs:
-        with open(doc, 'r') as fp:
+        with open(doc, "r") as fp:
             tree = TexTree(fp.read())
             for node in tree:
                 if node.type == NodeType.TEXT:
-                    matches = re.findall(r'\b(?:\S+-\S+)\b', node.content)
+                    matches = re.findall(r"\b(?:\S+-\S+)\b", node.content)
                     for m in matches:
                         if m not in compound_words:
                             compound_words[m] = []
                         compound_words[m].append((doc, node.lineno))
             trees.append((tree, doc))
     mismatches = {}
-    for tree, doc in trees:             
+    for tree, doc in trees:
         for node in tree:
             if node.type == NodeType.TEXT:
                 for word in compound_words:
                     matches = re.findall(
-                        f'\\b{"[^-]?".join(re.split("[-]", word))}\\b',
-                        node.content)
+                        f'\\b{"[^-]?".join(re.split("[-]", word))}\\b', node.content
+                    )
                     for m in matches:
                         if word not in mismatches:
                             mismatches[word] = []
                         mismatches[word].append((doc, node.lineno, m))
-    with open('hyphenations.list', 'w') as list_f:
-        list_f.write('Hyphenated words appearing in this document:')
+    with open("hyphenations.list", "w") as list_f:
+        list_f.write("Hyphenated words appearing in this document:")
         for word, appearances in compound_words.items():
             list_f.write(
-                f'\n{word} appears {len(appearances)} time'
-                f'{"s" if len(appearances) != 1 else ""}')
+                f"\n{word} appears {len(appearances)} time"
+                f'{"s" if len(appearances) != 1 else ""}'
+            )
     if len(mismatches) == 0:
         return
-    with open('hyphenations.warnings', 'w+') as warn_f:
+    with open("hyphenations.warnings", "w+") as warn_f:
         for word, appearances in mismatches.items():
             locations = ", ".join(
-                [f'"{a[2]}" in {a[0]} on line {a[1]}' for a in appearances])
+                [f'"{a[2]}" in {a[0]} on line {a[1]}' for a in appearances]
+            )
             warn_f.write(f'"{word}" also appears as {locations}\n')
         if warn_f.tell() - 1 > 0:
             warn_f.seek(warn_f.tell() - 1)
             warn_f.truncate()
 
-    
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        'Utility to check for common trivial errors in LaTeX papers.')
+        "Utility to check for common trivial errors in LaTeX papers."
+    )
     parser.add_argument(
-        '-f',
-        '--files',
-        nargs='+',
+        "-f",
+        "--files",
+        nargs="+",
         default=[],
-        help='Path(s) to LaTeX file(s) to check.  If ommited all files with '
-            'the *.tex extension in the current directory and its children '
-            'will be checked.')
+        help="Path(s) to LaTeX file(s) to check.  If ommited all files with "
+        "the *.tex extension in the current directory and its children "
+        "will be checked.",
+    )
     parser.add_argument(
-        '--hyphenation',
-        action='store_true',
-        help='Check that hyphenated words are hyphenated consistently .')
+        "--hyphenation",
+        action="store_true",
+        help="Check that hyphenated words are hyphenated consistently .",
+    )
     parser.add_argument(
-        '--acronyms',
-        action='store_true',
-        help='Check that all acronyms are defined.')
+        "--acronyms", action="store_true", help="Check that all acronyms are defined."
+    )
     parser.add_argument(
-        '--localization',
-        action='store_true',
-        help='Check that words with two or more acceptable spellings are '
-             'consistent.')
+        "--localization",
+        action="store_true",
+        help="Check that words with two or more acceptable spellings are "
+        "consistent.",
+    )
     args = parser.parse_args()
     tex_files = []
     if len(args.files) <= 0:
-        for root, _, files in os.walk('.'):
+        for root, _, files in os.walk("."):
             for f in files:
-                if f.endswith('.tex'):
+                if f.endswith(".tex"):
                     tex_files.append(os.path.join(root, f))
     else:
         tex_files = args.files
