@@ -18,4 +18,4 @@ jobs:
     - name: Build Docker image
       run: docker build . --file ci/Dockerfile --tag stylechecker:latest
     - name: Code style check
-      run: docker run stylechecker:latest black --check stylechecker.py
+      run: docker run stylechecker:latest black --check /stylechecker/stylechecker.py
