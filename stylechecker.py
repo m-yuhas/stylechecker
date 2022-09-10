@@ -246,7 +246,8 @@ def check_localization(docs: List[str]) -> None:
     """Find inconsitent use of localized spellings (e.g. analysed and
     analyzed) in the same document.  Write a list of discrepancies to
     'loc.list' and write warning messages for the discrepancies to
-    'loc.warnings'.
+    'loc.warnings'.  Currently the only localization checks are those
+    involving the s -> z switch.
 
     Args:
         docs: a list of files comprising the project.
@@ -259,13 +260,13 @@ def check_localization(docs: List[str]) -> None:
             for node in tree:
                 if node.type == NodeType.TEXT:
                     us_matches = re.findall(
-                        r"(\w+zation|\w+yze|\w+yzing|\w+our|\w+our\w+|\w+re)\b",
+                        r"(\w+zation|\w+yze|\w+yzing)\b",
                         node.content,
                     )
                     if len(us_matches) > 0:
                         us_spellings.append((us_matches, doc, node.lineno))
                     uk_matches = re.findall(
-                        r"(\w+sation|\w+yse|\w+ysing|\w+our|\w+our\w+|\w+re)\b",
+                        r"(\w+sation|\w+yse|\w+ysing)\b",
                         node.content,
                     )
                     if len(uk_matches) > 0:
@@ -298,7 +299,13 @@ def check_localization(docs: List[str]) -> None:
 def check_acronyms(docs: List[str]) -> None:
     """Find all acronyms used in the document text.  Write a list of acronyms
     and their definitions to 'acronyms.list' and write warning messages for
-    acronyms missing definitions to 'acryonyms.warnings'.
+    acronyms missing definitions to 'acryonyms.warnings'.  Currently the
+    assumption is that the definition of an acronym is provided immediately
+    after its introduction in parentheses or the acronym appears in
+    parentheses immedieatly after its definition, e.g.:
+
+    CPU (central processing unit)
+    random access memory (RAM)
 
     Args:
         docs: a list of files comprising the project.
@@ -352,7 +359,8 @@ def check_acronyms(docs: List[str]) -> None:
 def check_hyphenations(docs: List[str]) -> None:
     """Find discrepancies in hyphenation of compound words, write a detailed
     report to 'compoundwords.list' and suspected discrepancies to
-    'compoundwords.warnings'.
+    'compoundwords.warnings'.  An example of a common discrepancy is
+    'hyperparameters,' 'hyper parameters,' and 'hyper-parameters.'
 
     Args:
         docs: a list of files comprising the project.

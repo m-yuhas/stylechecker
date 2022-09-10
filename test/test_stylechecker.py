@@ -167,8 +167,11 @@ class TestCheckHyphenations(unittest.TestCase):
 
     def tearDown(self) -> None:
         """Delete temporary files after each test."""
-        os.remove("hyphenations.list")
-        os.remove("hyphenations.warnings")
+        try:
+            os.remove("hyphenations.list")
+            os.remove("hyphenations.warnings")
+        except FileNotFoundError:
+            pass
 
     def test_smoke(self) -> None:
         """Smoke test of check_hyphenation.  Passing this is the bare minimum
@@ -236,6 +239,14 @@ class TestCheckHyphenations(unittest.TestCase):
         with open("hyphenations.warnings", "r") as warning_f:
             self.assertEqual(warnings_gt, warning_f.read())
 
+    def test_nowarnings(self) -> None:
+        """Test the case when no hyphenation warnings are present."""
+        list_gt = "Hyphenated words appearing in this document:"
+        check_hyphenations([os.path.join("test", "test_hyphenation_nowarn.tex")])
+        with open("hyphenations.list", "r") as list_f:
+            self.assertEqual(list_gt, list_f.read())
+        self.assertFalse(os.path.isfile("hyphenations.warnings"))
+
 
 class TestCheckAcronyms(unittest.TestCase):
     """Test case for the acronym checking function."""
@@ -246,8 +257,11 @@ class TestCheckAcronyms(unittest.TestCase):
 
     def tearDown(self) -> None:
         """Delete temporary files after each test."""
-        os.remove("acronyms.list")
-        os.remove("acronyms.warnings")
+        try:
+            os.remove("acronyms.list")
+            os.remove("acronyms.warnings")
+        except FileNotFoundError:
+            pass
 
     def test_smoke(self) -> None:
         """Smoke test of check_acronyms.  Passing this is the bare minimum
@@ -275,8 +289,11 @@ class TestCheckLocalization(unittest.TestCase):
 
     def tearDown(self) -> None:
         """Delete temporary files after each test."""
-        os.remove("localization.list")
-        os.remove("localization.warnings")
+        try:
+            os.remove("localization.list")
+            os.remove("localization.warnings")
+        except FileNotFoundError:
+            pass
 
     def test_localization_error(self) -> None:
         """Check that two spelling schemes in the same document throws an
