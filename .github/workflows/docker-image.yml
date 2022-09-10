@@ -18,4 +18,10 @@ jobs:
     - name: Build Docker image
       run: docker build . --file ci/Dockerfile --tag stylechecker:latest
     - name: Code style check
-      run: docker run stylechecker:latest black --check /stylechecker/stylechecker.py
+      run: docker run -v $PWD:/stylechecker stylechecker:latest black --check /stylechecker/
+    - name: Unit tests
+      run: docker run -v $PWD:/stylechecker stylechecker:latest coverage run -m unittest test.test_stylechecker
+    - name: Coverage report
+      run: docker run -v $PWD:/stylechecker stylechecker:latest coverage report -m
+    - name: Integration test
+      run: docker run -v $PWD:/stylechecker stylechecker:latest python3 -m unittest ci.integration_test
