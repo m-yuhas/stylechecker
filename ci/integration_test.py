@@ -23,12 +23,12 @@ class TestLatexBuild(unittest.TestCase):
         self.assertEqual(proc.returncode, 0)
         with open("integration_test.log", "r") as out_f:
             build_log = out_f.read()
-            self.assertTrue(os.path.isfile('hyphenations.warnings'))
-            self.assertTrue(os.path.isfile('hyphenations.list'))
-            self.assertTrue(os.path.isfile('acronyms.warnings'))
-            self.assertTrue(os.path.isfile('acronyms.list'))
-            self.assertTrue(os.path.isfile('localization.warnings'))
-            self.assertTrue(os.path.isfile('localization.list'))
+            self.assertTrue(os.path.isfile("hyphenations.warnings"))
+            self.assertTrue(os.path.isfile("hyphenations.list"))
+            self.assertTrue(os.path.isfile("acronyms.warnings"))
+            self.assertTrue(os.path.isfile("acronyms.list"))
+            self.assertTrue(os.path.isfile("localization.warnings"))
+            self.assertTrue(os.path.isfile("localization.list"))
         cleanup_list = [
             "acronyms.list",
             "acronyms.warnings",
