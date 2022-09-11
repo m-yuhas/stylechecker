@@ -24,6 +24,6 @@ jobs:
     - name: Coverage report
       run: docker run -v $PWD:/stylechecker stylechecker:latest coverage report -m
     - name: Check latex version
-      run: apt list --installed | grep texlive
+      run: apt-get list --installed | grep texlive
     - name: Integration test
       run: docker run -v $PWD:/stylechecker stylechecker:latest python3 -m unittest ci.integration_test
