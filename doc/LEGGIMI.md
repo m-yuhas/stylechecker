@@ -41,6 +41,9 @@ docker run -v $PWD:/stylechecker stylechecker:latest python3 -m unittest ci.inte
 
 ## Documentazione in Altre Lingue
 [Documentación en español](L%C3%89AME.md)
+
 [Documentation en français](LISEZ-MOI.md)
+
 [Documentation in English](../README.md)
+
 [中文手冊](%E8%AE%80%E6%88%91%E6%AA%94%E6%A1%88.md)
